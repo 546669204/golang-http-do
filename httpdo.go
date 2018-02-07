@@ -16,7 +16,7 @@ import (
 var autocookie, _ = cookiejar.New(nil)
 var Autocookieflag = false
 
-func HttpDo(Ptype, durl, data, cookies, proxystr string, overtime int) ([]byte, error) {
+func HttpDo(Ptype, durl, data, cookies, proxystr string, overtime int, header string) ([]byte, error) {
 	if overtime == 0 {
 		overtime = 30
 	}
@@ -61,7 +61,16 @@ func HttpDo(Ptype, durl, data, cookies, proxystr string, overtime int) ([]byte, 
 	if cookies != "" {
 		req.Header.Set("Cookie", cookies)
 	}
-
+	if header != "" {
+		array := strings.Split(header, "\n")
+		for index := 0; index < len(array); index++ {
+			elm := array[index]
+			si := strings.Index(elm, ":")
+			if si >= 0 {
+				req.Header.Set(string([]byte(elm)[:si]), string([]byte(elm)[si+1:]))
+			}
+		}
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return []byte("client.Do ERROR"), err
