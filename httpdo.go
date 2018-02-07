@@ -3,6 +3,7 @@ package httpdo
 import (
 	"errors"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/http/cookiejar"
@@ -23,8 +24,9 @@ type option struct {
 	cookies     string
 	proxystr    string
 	overtime    int
+	header      string
 	printreq    bool
-	printresq   bool
+	printresp   bool
 	printStatus bool
 }
 
@@ -35,21 +37,22 @@ func Default() option {
 		cookies:     "",
 		proxystr:    "",
 		overtime:    30,
+		header:      "",
 		printreq:    false,
-		printresq:   false,
+		printresp:   false,
 		printStatus: false,
 	}
 }
-func HttpDo(Ptype, durl, data, cookies, proxystr string, overtime int, header string) ([]byte, error) {
-	if overtime == 0 {
-		overtime = 30
+func HttpDo(o option) ([]byte, error) {
+	if o.overtime == 0 {
+		o.overtime = 30
 	}
-	Ptype = strings.ToUpper(Ptype)
+	o.method = strings.ToUpper(o.method)
 	client := &http.Client{}
 	transport := &http.Transport{
 		Dial: func(netw, addr string) (net.Conn, error) {
-			deadline := time.Now().Add(time.Duration(overtime) * time.Second)
-			c, err := net.DialTimeout(netw, addr, time.Second*time.Duration(overtime))
+			deadline := time.Now().Add(time.Duration(o.overtime) * time.Second)
+			c, err := net.DialTimeout(netw, addr, time.Second*time.Duration(o.overtime))
 			if err != nil {
 				return nil, err
 			}
@@ -57,9 +60,9 @@ func HttpDo(Ptype, durl, data, cookies, proxystr string, overtime int, header st
 			return c, nil
 		},
 	}
-	if proxystr != "" {
+	if o.proxystr != "" {
 		urli := url.URL{}
-		proxy, _ := urli.Parse(strings.ToLower(proxystr))
+		proxy, _ := urli.Parse(strings.ToLower(o.proxystr))
 		transport.Proxy = http.ProxyURL(proxy)
 	}
 	if Autocookieflag == true {
@@ -67,7 +70,7 @@ func HttpDo(Ptype, durl, data, cookies, proxystr string, overtime int, header st
 	}
 	client.Transport = transport
 
-	req, err := http.NewRequest(Ptype, durl, strings.NewReader(data))
+	req, err := http.NewRequest(o.method, o.url, strings.NewReader(o.data))
 	if err != nil {
 		return []byte("http.NewRequest ERROR"), err
 	}
@@ -78,15 +81,16 @@ func HttpDo(Ptype, durl, data, cookies, proxystr string, overtime int, header st
 	req.Header.Add("upgrade-insecure-requests", `1`)
 	req.Header.Add("User-Agent", `User-Agent,Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36`)
 
-	if Ptype == "POST" {
+	if o.method == "POST" {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
 
-	if cookies != "" {
-		req.Header.Set("Cookie", cookies)
+	if o.cookies != "" {
+		req.Header.Set("Cookie", o.cookies)
 	}
-	if header != "" {
-		array := strings.Split(header, "\n")
+
+	if o.header != "" {
+		array := strings.Split(o.header, "\n")
 		for index := 0; index < len(array); index++ {
 			elm := array[index]
 			si := strings.Index(elm, ":")
@@ -100,16 +104,21 @@ func HttpDo(Ptype, durl, data, cookies, proxystr string, overtime int, header st
 		return []byte("client.Do ERROR"), err
 	}
 	defer resp.Body.Close()
-	//log.Printf("%s\n", req.Header)
-	//log.Printf("%s\n", resp.Header)
-	//log.Printf("%s\n", autocookie)
-	//fmt.Printf("%s", resp.Status)
+
+	if o.printreq {
+		log.Printf("%s\n", req.Header)
+	}
+	if o.printresp {
+		log.Printf("%s\n", resp.Header)
+	}
+	if o.printStatus {
+		log.Printf("%s\n", resp.Status)
+	}
 
 	if strings.Index(resp.Status, "200") != -1 {
 		body, err := ioutil.ReadAll(resp.Body)
 		if _, ok := resp.Header["Content-Type"]; ok {
 			ContentType := resp.Header["Content-Type"][0]
-			//fmt.Println(ContentType)
 			if err != nil {
 				return []byte("ioutil.ReadAll ERROR"), err
 			}
@@ -121,12 +130,9 @@ func HttpDo(Ptype, durl, data, cookies, proxystr string, overtime int, header st
 						charset = "UTF-8"
 					}
 				}
-				//fmt.Println(charset)
 				if strings.ToLower(charset) == "gb2312" {
 					charset = "GBK"
 				}
-				//fmt.Println(charset)
-
 				if strings.Contains("GBKUTF-8", charset) {
 					dec := mahonia.NewDecoder(charset)
 					return []byte(dec.ConvertString(string(body))), nil
