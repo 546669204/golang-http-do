@@ -18,41 +18,42 @@ var autocookie, _ = cookiejar.New(nil)
 var Autocookieflag = false
 
 type option struct {
-	method      string
-	url         string
-	data        string
-	cookies     string
-	proxystr    string
-	overtime    int
-	header      string
-	printreq    bool
-	printresp   bool
-	printStatus bool
+	Method      string
+	Url         string
+	Data        string
+	Cookies     string
+	Proxystr    string
+	Overtime    int
+	Header      string
+	Printreq    bool
+	Printresp   bool
+	PrintStatus bool
 }
 
 func Default() option {
 	return option{
-		method:      "GET",
-		data:        "",
-		cookies:     "",
-		proxystr:    "",
-		overtime:    30,
-		header:      "",
-		printreq:    false,
-		printresp:   false,
-		printStatus: false,
+		Method:      "GET",
+		Url:         "",
+		Data:        "",
+		Cookies:     "",
+		Proxystr:    "",
+		Overtime:    30,
+		Header:      "",
+		Printreq:    false,
+		Printresp:   false,
+		PrintStatus: false,
 	}
 }
 func HttpDo(o option) ([]byte, error) {
-	if o.overtime == 0 {
-		o.overtime = 30
+	if o.Overtime == 0 {
+		o.Overtime = 30
 	}
-	o.method = strings.ToUpper(o.method)
+	o.Method = strings.ToUpper(o.Method)
 	client := &http.Client{}
 	transport := &http.Transport{
 		Dial: func(netw, addr string) (net.Conn, error) {
-			deadline := time.Now().Add(time.Duration(o.overtime) * time.Second)
-			c, err := net.DialTimeout(netw, addr, time.Second*time.Duration(o.overtime))
+			deadline := time.Now().Add(time.Duration(o.Overtime) * time.Second)
+			c, err := net.DialTimeout(netw, addr, time.Second*time.Duration(o.Overtime))
 			if err != nil {
 				return nil, err
 			}
@@ -60,9 +61,9 @@ func HttpDo(o option) ([]byte, error) {
 			return c, nil
 		},
 	}
-	if o.proxystr != "" {
+	if o.Proxystr != "" {
 		urli := url.URL{}
-		proxy, _ := urli.Parse(strings.ToLower(o.proxystr))
+		proxy, _ := urli.Parse(strings.ToLower(o.Proxystr))
 		transport.Proxy = http.ProxyURL(proxy)
 	}
 	if Autocookieflag == true {
@@ -70,7 +71,7 @@ func HttpDo(o option) ([]byte, error) {
 	}
 	client.Transport = transport
 
-	req, err := http.NewRequest(o.method, o.url, strings.NewReader(o.data))
+	req, err := http.NewRequest(o.Method, o.Url, strings.NewReader(o.Data))
 	if err != nil {
 		return []byte("http.NewRequest ERROR"), err
 	}
@@ -81,16 +82,16 @@ func HttpDo(o option) ([]byte, error) {
 	req.Header.Add("upgrade-insecure-requests", `1`)
 	req.Header.Add("User-Agent", `User-Agent,Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36`)
 
-	if o.method == "POST" {
+	if o.Method == "POST" {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
 
-	if o.cookies != "" {
-		req.Header.Set("Cookie", o.cookies)
+	if o.Cookies != "" {
+		req.Header.Set("Cookie", o.Cookies)
 	}
 
-	if o.header != "" {
-		array := strings.Split(o.header, "\n")
+	if o.Header != "" {
+		array := strings.Split(o.Header, "\n")
 		for index := 0; index < len(array); index++ {
 			elm := array[index]
 			si := strings.Index(elm, ":")
@@ -105,13 +106,13 @@ func HttpDo(o option) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
-	if o.printreq {
+	if o.Printreq {
 		log.Printf("%s\n", req.Header)
 	}
-	if o.printresp {
+	if o.Printresp {
 		log.Printf("%s\n", resp.Header)
 	}
-	if o.printStatus {
+	if o.PrintStatus {
 		log.Printf("%s\n", resp.Status)
 	}
 
