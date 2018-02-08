@@ -14,7 +14,7 @@ import (
 	"github.com/axgle/mahonia"
 )
 
-var autocookie, _ = cookiejar.New(nil)
+var Autocookie, _ = cookiejar.New(nil)
 var Autocookieflag = false
 
 type option struct {
@@ -67,7 +67,7 @@ func HttpDo(o option) ([]byte, error) {
 		transport.Proxy = http.ProxyURL(proxy)
 	}
 	if Autocookieflag == true {
-		client.Jar = autocookie
+		client.Jar = Autocookie
 	}
 	client.Transport = transport
 
