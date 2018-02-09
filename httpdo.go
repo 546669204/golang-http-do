@@ -75,11 +75,11 @@ func HttpDo(o option) ([]byte, error) {
 	if err != nil {
 		return []byte("http.NewRequest ERROR"), err
 	}
-	req.Header.Add("accept", `text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8`)
+	//req.Header.Add("accept", `text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8`)
 	//req.Header.Add("accept-encoding", `gzip`)
-	req.Header.Add("accept-language", `zh-CN,zh;q=0.8,en;q=0.6`)
-	req.Header.Add("cache-control", `max-age=0`)
-	req.Header.Add("upgrade-insecure-requests", `1`)
+	//req.Header.Add("accept-language", `zh-CN,zh;q=0.8,en;q=0.6`)
+	//req.Header.Add("cache-control", `max-age=0`)
+	//req.Header.Add("upgrade-insecure-requests", `1`)
 	req.Header.Add("User-Agent", `User-Agent,Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36`)
 
 	if o.Method == "POST" {
