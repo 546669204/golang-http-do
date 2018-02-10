@@ -76,7 +76,7 @@ func HttpDo(o option) ([]byte, error) {
 	var ReqData []byte
 	switch reflect.TypeOf(o.Data).String() {
 	case "string":
-		ReqData = o.Data.([]byte)
+		ReqData = []byte(o.Data.(string))
 		break
 	}
 	req, err := http.NewRequest(o.Method, o.Url, bytes.NewReader(ReqData))
