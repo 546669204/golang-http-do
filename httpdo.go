@@ -1,6 +1,7 @@
 package httpdo
 
 import (
+	"bytes"
 	"errors"
 	"io/ioutil"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"reflect"
 	"strings"
 	"time"
 
@@ -20,7 +22,7 @@ var Autocookieflag = false
 type option struct {
 	Method      string
 	Url         string
-	Data        string
+	Data        interface{}
 	Cookies     string
 	Proxystr    string
 	Overtime    int
@@ -71,7 +73,13 @@ func HttpDo(o option) ([]byte, error) {
 	}
 	client.Transport = transport
 
-	req, err := http.NewRequest(o.Method, o.Url, strings.NewReader(o.Data))
+	var ReqData []byte
+	switch reflect.TypeOf(o.Data).String() {
+	case "string":
+		ReqData = o.Data.([]byte)
+		break
+	}
+	req, err := http.NewRequest(o.Method, o.Url, bytes.NewReader(ReqData))
 	if err != nil {
 		return []byte("http.NewRequest ERROR"), err
 	}
