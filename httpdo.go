@@ -7,17 +7,36 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/http/cookiejar"
+	
 	"net/url"
 	"reflect"
 	"strings"
 	"time"
 
 	"github.com/axgle/mahonia"
+	pcookie "github.com/juju/persistent-cookiejar"
 )
 
-var Autocookie, _ = cookiejar.New(nil)
+
+var Autocookie, _ = pcookie.New(&pcookie.Options{
+	PublicSuffixList: httpPSL{},
+	Filename:         "cookie.data",
+	NoPersist:        "cookie.data" == "",
+})
+
 var Autocookieflag = false
+
+type httpPSL struct{}
+
+func (httpPSL) String() string {
+	return "HttpPSL"
+}
+func (httpPSL) PublicSuffix(d string) string {
+	if d == "co.uk" || strings.HasSuffix(d, ".co.uk") {
+		return "co.uk"
+	}
+	return d[strings.LastIndex(d, ".")+1:]
+}
 
 type option struct {
 	Method      string
