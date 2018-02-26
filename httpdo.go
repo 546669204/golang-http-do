@@ -1,6 +1,9 @@
 package httpdo
 
 import (
+	"fmt"
+	"os"
+	"encoding/json"
 	"bytes"
 	"errors"
 	"io/ioutil"
@@ -14,29 +17,17 @@ import (
 	"time"
 
 	"github.com/axgle/mahonia"
-	pcookie "github.com/juju/persistent-cookiejar"
+	//pcookie "github.com/juju/persistent-cookiejar"
+	
 )
 
-
-var Autocookie, _ = pcookie.New(&pcookie.Options{
-	PublicSuffixList: httpPSL{},
-	Filename:         "cookie.data",
-	NoPersist:        "cookie.data" == "",
-})
+var Autocookie= &Jar{
+	entries: make(map[string]map[string]entry),
+}
 
 var Autocookieflag = false
 
-type httpPSL struct{}
-
-func (httpPSL) String() string {
-	return "HttpPSL"
-}
-func (httpPSL) PublicSuffix(d string) string {
-	if d == "co.uk" || strings.HasSuffix(d, ".co.uk") {
-		return "co.uk"
-	}
-	return d[strings.LastIndex(d, ".")+1:]
-}
+var Debug = false
 
 type option struct {
 	Method      string
@@ -81,6 +72,7 @@ func HttpDo(o option) ([]byte, error) {
 			c.SetDeadline(deadline)
 			return c, nil
 		},
+		//TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},//跳过效验证书
 	}
 	if o.Proxystr != "" {
 		urli := url.URL{}
@@ -97,16 +89,14 @@ func HttpDo(o option) ([]byte, error) {
 	case "string":
 		ReqData = []byte(o.Data.(string))
 		break
+	default:
+		ReqData = o.Data.([]uint8)
+		break
 	}
 	req, err := http.NewRequest(o.Method, o.Url, bytes.NewReader(ReqData))
 	if err != nil {
 		return []byte("http.NewRequest ERROR"), err
 	}
-	//req.Header.Add("accept", `text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8`)
-	//req.Header.Add("accept-encoding", `gzip`)
-	//req.Header.Add("accept-language", `zh-CN,zh;q=0.8,en;q=0.6`)
-	//req.Header.Add("cache-control", `max-age=0`)
-	//req.Header.Add("upgrade-insecure-requests", `1`)
 	req.Header.Add("User-Agent", `User-Agent,Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36`)
 
 	if o.Method == "POST" {
@@ -142,9 +132,15 @@ func HttpDo(o option) ([]byte, error) {
 	if o.PrintStatus {
 		log.Printf("%s\n", resp.Status)
 	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if Debug {
+		file,_:=os.OpenFile("httpdo.log",os.O_APPEND|os.O_CREATE,0664)
+		defer file.Close()
+		file.WriteString(fmt.Sprintf("======[START]===%s===\n\n%s  %s  %s\n%s\n%s\n\n%s  %s\n%s\n%s\n\n======[END]======\n\n\n",time.Now().Format("2006-01-02 15:04:05"),req.Method,req.URL,req.Proto,formatheader(req.Header),ReqData,resp.Status,resp.Proto,formatheader(resp.Header),body))
+	}
 
 	if strings.Index(resp.Status, "200") != -1 {
-		body, err := ioutil.ReadAll(resp.Body)
+		
 		if _, ok := resp.Header["Content-Type"]; ok {
 			ContentType := resp.Header["Content-Type"][0]
 			if err != nil {
@@ -208,5 +204,41 @@ func GetBetweenStr(str, start, end string) string {
 		}
 	}
 	str = string([]byte(str)[:m])
+	return str
+}
+
+
+func SaveCookies(){
+	file,err:=os.OpenFile("cookie.data",os.O_CREATE|os.O_RDWR|os.O_TRUNC,0)
+	if err != nil {
+		log.Println(err)
+	}
+	defer file.Close()
+	
+	jsonbyte,_:=json.Marshal(Autocookie.entries)
+	file.Write(jsonbyte)
+	return 
+}
+
+func LoadCookies(){
+	var entries  = make(map[string]map[string]entry)
+	_,err:=os.OpenFile("cookie.data",os.O_RDWR,0)
+	if os.IsNotExist(err) {
+		return 
+	}
+	filebyte,_:=ioutil.ReadFile("cookie.data")
+	if err := json.Unmarshal(filebyte, &entries); err != nil {
+		log.Println( err)
+		return 
+	}
+	Autocookie.entries = entries
+}
+
+
+func formatheader(h http.Header) string{
+	var str = ""
+	for i,k := range h{
+		str = str + fmt.Sprintf("%s : %s\n",i,k)
+	}
 	return str
 }
