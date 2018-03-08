@@ -1,16 +1,16 @@
 package httpdo
 
 import (
-	"fmt"
-	"os"
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
-	
+	"os"
+
 	"net/url"
 	"reflect"
 	"strings"
@@ -18,10 +18,9 @@ import (
 
 	"github.com/axgle/mahonia"
 	//pcookie "github.com/juju/persistent-cookiejar"
-	
 )
 
-var Autocookie= &Jar{
+var Autocookie = &Jar{
 	entries: make(map[string]map[string]entry),
 }
 
@@ -134,13 +133,13 @@ func HttpDo(o option) ([]byte, error) {
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if Debug {
-		file,_:=os.OpenFile("httpdo.log",os.O_APPEND|os.O_CREATE,0664)
+		file, _ := os.OpenFile("httpdo.log", os.O_APPEND|os.O_CREATE, 0664)
 		defer file.Close()
-		file.WriteString(fmt.Sprintf("======[START]===%s===\n\n%s  %s  %s\n%s\n%s\n\n%s  %s\n%s\n%s\n\n======[END]======\n\n\n",time.Now().Format("2006-01-02 15:04:05"),req.Method,req.URL,req.Proto,formatheader(req.Header),ReqData,resp.Status,resp.Proto,formatheader(resp.Header),body))
+		file.WriteString(fmt.Sprintf("======[START]===%s===\n\n%s  %s  %s\n%s\n%s\n\n%s  %s\n%s\n%s\n\n======[END]======\n\n\n", time.Now().Format("2006-01-02 15:04:05"), req.Method, req.URL, req.Proto, formatheader(req.Header), ReqData, resp.Status, resp.Proto, formatheader(resp.Header), body))
 	}
 
 	if strings.Index(resp.Status, "200") != -1 {
-		
+
 		if _, ok := resp.Header["Content-Type"]; ok {
 			ContentType := resp.Header["Content-Type"][0]
 			if err != nil {
@@ -207,38 +206,41 @@ func GetBetweenStr(str, start, end string) string {
 	return str
 }
 
-
-func SaveCookies(){
-	file,err:=os.OpenFile("cookie.data",os.O_CREATE|os.O_RDWR|os.O_TRUNC,0)
+func SaveCookies() {
+	file, err := os.OpenFile("cookie.data", os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0)
 	if err != nil {
 		log.Println(err)
 	}
 	defer file.Close()
-	
-	jsonbyte,_:=json.Marshal(Autocookie.entries)
+
+	jsonbyte, _ := json.Marshal(Autocookie.entries)
 	file.Write(jsonbyte)
-	return 
+	return
 }
 
-func LoadCookies(){
-	var entries  = make(map[string]map[string]entry)
-	_,err:=os.OpenFile("cookie.data",os.O_RDWR,0)
+func LoadCookies() {
+	var entries = make(map[string]map[string]entry)
+	_, err := os.OpenFile("cookie.data", os.O_RDWR, 0)
 	if os.IsNotExist(err) {
-		return 
+		return
 	}
-	filebyte,_:=ioutil.ReadFile("cookie.data")
+	filebyte, _ := ioutil.ReadFile("cookie.data")
 	if err := json.Unmarshal(filebyte, &entries); err != nil {
-		log.Println( err)
-		return 
+		log.Println(err)
+		return
 	}
 	Autocookie.entries = entries
 }
 
+func GetAllCookies() string {
+	jsonbyte, _ := json.Marshal(Autocookie.entries)
+	return string(jsonbyte)
+}
 
-func formatheader(h http.Header) string{
+func formatheader(h http.Header) string {
 	var str = ""
-	for i,k := range h{
-		str = str + fmt.Sprintf("%s : %s\n",i,k)
+	for i, k := range h {
+		str = str + fmt.Sprintf("%s : %s\n", i, k)
 	}
 	return str
 }
