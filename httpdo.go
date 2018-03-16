@@ -27,6 +27,7 @@ var Autocookie = &Jar{
 var Autocookieflag = false
 
 var Debug = false
+var SaveFileName string = "cookies.data"
 
 type option struct {
 	Method      string
@@ -207,7 +208,7 @@ func GetBetweenStr(str, start, end string) string {
 }
 
 func SaveCookies() {
-	file, err := os.OpenFile("cookie.data", os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0)
+	file, err := os.OpenFile(SaveFileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0)
 	if err != nil {
 		log.Println(err)
 	}
@@ -220,11 +221,11 @@ func SaveCookies() {
 
 func LoadCookies() {
 	var entries = make(map[string]map[string]entry)
-	_, err := os.OpenFile("cookie.data", os.O_RDWR, 0)
+	_, err := os.OpenFile(SaveFileName, os.O_RDWR, 0)
 	if os.IsNotExist(err) {
 		return
 	}
-	filebyte, _ := ioutil.ReadFile("cookie.data")
+	filebyte, _ := ioutil.ReadFile(SaveFileName)
 	if err := json.Unmarshal(filebyte, &entries); err != nil {
 		log.Println(err)
 		return
