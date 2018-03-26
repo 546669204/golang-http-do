@@ -134,7 +134,7 @@ func HttpDo(o option) ([]byte, error) {
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if Debug {
-		file, _ := os.OpenFile("httpdo.log", os.O_APPEND|os.O_CREATE, 0664)
+		file, _ := os.OpenFile("httpdo.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		defer file.Close()
 		file.WriteString(fmt.Sprintf("======[START]===%s===\n\n%s  %s  %s\n%s\n%s\n\n%s  %s\n%s\n%s\n\n======[END]======\n\n\n", time.Now().Format("2006-01-02 15:04:05"), req.Method, req.URL, req.Proto, formatheader(req.Header), ReqData, resp.Status, resp.Proto, formatheader(resp.Header), body))
 	}
