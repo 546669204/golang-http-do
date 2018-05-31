@@ -40,6 +40,13 @@ type option struct {
 	Printreq    bool
 	Printresp   bool
 	PrintStatus bool
+	PrintRaw    bool
+	Raw         *HttpdoRawModel
+}
+type HttpdoRawModel struct {
+	Resp  http.Response
+	Req   http.Request
+	Relty []byte
 }
 
 func Default() option {
@@ -54,6 +61,8 @@ func Default() option {
 		Printreq:    false,
 		Printresp:   false,
 		PrintStatus: false,
+		PrintRaw:    false,
+		Raw:         new(HttpdoRawModel),
 	}
 }
 func HttpDo(o option) ([]byte, error) {
@@ -133,6 +142,11 @@ func HttpDo(o option) ([]byte, error) {
 		log.Printf("%s\n", resp.Status)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
+	if o.PrintRaw {
+		o.Raw.Req = *req
+		o.Raw.Resp = *resp
+		o.Raw.Relty = body
+	}
 	if Debug {
 		file, _ := os.OpenFile("httpdo.log", os.O_APPEND|os.O_CREATE, 0664)
 		defer file.Close()
