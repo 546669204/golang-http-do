@@ -2,21 +2,22 @@ package httpdo
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"regexp"
+
+	"github.com/axgle/mahonia"
 
 	"net/url"
 	"reflect"
 	"strings"
 	"time"
-
-	"github.com/axgle/mahonia"
 	//pcookie "github.com/juju/persistent-cookiejar"
 )
 
@@ -65,7 +66,7 @@ func Default() option {
 		Raw:         new(HttpdoRawModel),
 	}
 }
-func HttpDo(o option) ([]byte, error) {
+func HttpDo(o option) (retbody []byte, reterr error) {
 	if o.Overtime == 0 {
 		o.Overtime = 30
 	}
@@ -141,60 +142,58 @@ func HttpDo(o option) ([]byte, error) {
 	if o.PrintStatus {
 		log.Printf("%s\n", resp.Status)
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+
+	var body []byte
+	switch resp.Header.Get("Content-Encoding") {
+	case "gzip":
+		reader, err := gzip.NewReader(resp.Body)
+		defer reader.Close()
+		if err != nil {
+
+		}
+		body, err = ioutil.ReadAll(reader)
+		if err != nil {
+			retbody = []byte("ioutil.ReadAll ERROR")
+			reterr = err
+			goto ENDANDPRINT
+		}
+		break
+	default:
+		body, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			retbody = []byte("ioutil.ReadAll ERROR")
+			reterr = err
+			goto ENDANDPRINT
+		}
+	}
+	retbody = body
+	reterr = nil
+
+	if ContentType, ok := resp.Header["Content-Type"]; ok && len(ContentType) > 0 {
+		charset := regexp.MustCompile("charset=\\w+$").FindStringSubmatch(ContentType[0])
+		if len(charset) == 2 {
+			dec := mahonia.NewDecoder(charset[1])
+			if dec != nil {
+				retbody = []byte(dec.ConvertString(string(body)))
+				reterr = nil
+				goto ENDANDPRINT
+			}
+		}
+	}
+
+ENDANDPRINT:
+
 	if o.PrintRaw {
 		o.Raw.Req = *req
 		o.Raw.Resp = *resp
-		o.Raw.Relty = body
+		o.Raw.Relty = retbody
 	}
 	if Debug {
 		file, _ := os.OpenFile("httpdo.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		defer file.Close()
-		file.WriteString(fmt.Sprintf("======[START]===%s===\n\n%s  %s  %s\n%s\n%s\n\n%s  %s\n%s\n%s\n\n======[END]======\n\n\n", time.Now().Format("2006-01-02 15:04:05"), req.Method, req.URL, req.Proto, formatheader(req.Header), ReqData, resp.Status, resp.Proto, formatheader(resp.Header), body))
+		file.WriteString(fmt.Sprintf("======[START]===%s===\n\n%s  %s  %s\n%s\n%s\n\n%s  %s\n%s\n%s\n\n======[END]======\n\n\n", time.Now().Format("2006-01-02 15:04:05"), req.Method, req.URL, req.Proto, formatheader(req.Header), ReqData, resp.Status, resp.Proto, formatheader(resp.Header), retbody))
 	}
-
-	if strings.Index(resp.Status, "200") != -1 {
-
-		if _, ok := resp.Header["Content-Type"]; ok {
-			ContentType := resp.Header["Content-Type"][0]
-			if err != nil {
-				return []byte("ioutil.ReadAll ERROR"), err
-			}
-			if strings.Contains(ContentType, "text/html") {
-				charset := (GetBetweenStr(ContentType, "charset=", ""))
-				if charset == "" || charset == ContentType {
-					charset = (GetBetweenStr(string(body), "charset=", "\""))
-					if charset == "" {
-						charset = "UTF-8"
-					}
-				}
-				if strings.ToLower(charset) == "gb2312" {
-					charset = "GBK"
-				}
-				if strings.Contains("GBKUTF-8", charset) {
-					dec := mahonia.NewDecoder(charset)
-					return []byte(dec.ConvertString(string(body))), nil
-				}
-				return body, nil
-			} else if strings.Contains(ContentType, "text/css") {
-				charset := (GetBetweenStr(string(body), "charset \"", "\""))
-				if charset == "" {
-					charset = "utf-8"
-				}
-				dec := mahonia.NewDecoder(charset)
-				return []byte(dec.ConvertString(string(body))), nil
-			} else {
-				return body, nil
-			}
-		} else {
-			return body, nil
-		}
-
-	} else {
-		var err error = errors.New(resp.Status)
-		return []byte("非200ERROR"), err
-	}
-
+	return
 }
 
 func GetBetweenStr(str, start, end string) string {
