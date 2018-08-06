@@ -149,7 +149,9 @@ func HttpDo(o option) (retbody []byte, reterr error) {
 		reader, err := gzip.NewReader(resp.Body)
 		defer reader.Close()
 		if err != nil {
-
+			retbody = []byte(err.Error())
+			reterr = err
+			goto ENDANDPRINT
 		}
 		body, err = ioutil.ReadAll(reader)
 		if err != nil {
