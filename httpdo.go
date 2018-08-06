@@ -174,7 +174,7 @@ func HttpDo(o option) (retbody []byte, reterr error) {
 	if ContentType, ok := resp.Header["Content-Type"]; ok && len(ContentType) > 0 {
 		charset := regexp.MustCompile("charset=\\w+$").FindStringSubmatch(ContentType[0])
 		if len(charset) == 2 {
-			dec := mahonia.NewDecoder(charset[1])
+			dec := mahonia.NewDecoder(strings.ToLower(charset[1]))
 			if dec != nil {
 				retbody = []byte(dec.ConvertString(string(body)))
 				reterr = nil
